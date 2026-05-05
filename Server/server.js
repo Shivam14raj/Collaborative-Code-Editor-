@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import http from "http";
 import { Server } from "socket.io";
+import axios from 'axios'
 
 dotenv.config();
 
@@ -44,7 +45,62 @@ io.on("connection", (socket) => {
   // CODE SYNC
   socket.on("codeChange", ({ roomID, code }) => {
     socket.to(roomID).emit("codeUpdate", code);
-  }); 
+  });  
+
+
+
+  // compile code sync 
+ const languageMap = {
+  javascript: 63,
+  python: 71,
+  cpp: 54,
+  java: 62,
+};
+
+socket.on("compileCode", async ({ code, roomID, language }) => {
+  try {
+    if (!rooms.has(roomID)) return;
+
+    if (!code || !languageMap[language]) {
+      return io.to(roomID).emit("codeResponse", {
+        output: "Code or language is missing",
+      });
+    }
+
+    const response = await axios.post(
+      "https://ce.judge0.com/submissions?base64_encoded=false&wait=true",
+      {
+        source_code: code,
+        language_id: languageMap[language],
+        stdin: "",
+      },
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    io.to(roomID).emit("codeResponse", {
+      output:
+        response.data.stdout ||
+        response.data.stderr ||
+        response.data.compile_output ||
+        response.data.message ||
+        "No output",
+    });
+  } catch (error) {
+    console.log("Judge0 error:", error.response?.data || error.message);
+
+    io.to(roomID).emit("codeResponse", {
+      output:
+        error.response?.data?.message ||
+        "Code execution failed",
+    });
+  }
+}); 
+
+
 
   // typing incicator 
   socket.on("typing",  ({roomID, userName})=>{

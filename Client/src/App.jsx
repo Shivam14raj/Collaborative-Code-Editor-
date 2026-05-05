@@ -15,11 +15,14 @@ const App = () => {
   const [code, setcode] = useState("");
   const [users, setusers] = useState([]);
   const [typing, setTyping] = useState("");
+  const [output, setOutput] = useState("");
+  const [version, setVersion] = useState("*"); // expecting all the version
+  const [isExecuting, setIsExecuting] = useState(false);
 
   // CODE SYNC
   useEffect(() => {
-    const handler = (code) => {   
-      setcode(code); 
+    const handler = (code) => {
+      setcode(code);
     };
 
     socket.on("codeUpdate", handler);
@@ -37,53 +40,65 @@ const App = () => {
   }, []);
 
   // Typing useeffect
- useEffect(() => {
-  let timeout;
+  useEffect(() => {
+    let timeout;
 
-  const handler = (userName) => {
-    if (!userName) return;
+    const handler = (userName) => {
+      if (!userName) return;
 
-    setTyping(`${userName} is typing`);
+      setTyping(`${userName} is typing`);
 
-    clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      setTyping("");
-    }, 1200);
+      clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        setTyping("");
+      }, 1200);
+    };
+
+    socket.on("userTyping", handler);
+
+    return () => {
+      socket.off("userTyping", handler);
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  // code run
+  useEffect(() => {
+    const handler = (response) => {
+      setOutput(response.output || "No output");
+      setIsExecuting(false); // 🔥 stop loading here
+    };
+
+    socket.on("codeResponse", handler);
+
+    return () => {
+      socket.off("codeResponse", handler);
+    };
+  }, []);
+
+  // leave room handler
+  const leaveRoomHandler = () => {
+    socket.emit("leave-room", {
+      roomID,
+      userName: username,
+    });
+
+    setjoin(false);
+    setroomID("");
+    setusername("");
+    setcode("");
+    setusers([]);
+    setTyping("");
+
+    toast.success("Left room successfully");
   };
-
-  socket.on("userTyping", handler);
-
-  return () => {
-    socket.off("userTyping", handler);
-    clearTimeout(timeout);
-  };
-}, []);  
-  
-
-// leave room handler 
-const leaveRoomHandler = () => {
-  socket.emit("leave-room", {
-    roomID,
-    userName: username,
-  });
-
-  setjoin(false);
-  setroomID("");
-  setusername("");
-  setcode("");
-  setusers([]);
-  setTyping(""); 
-
-  toast.success("Left room successfully");
-}; 
-
 
   // JOIN ROOM
   const joinRoomHandler = () => {
     if (roomID && username) {
       socket.emit("join", {
         roomID,
-        userName: username, 
+        userName: username,
       });
       setjoin(true);
     }
@@ -103,6 +118,18 @@ const leaveRoomHandler = () => {
       code: newcode,
     });
     socket.emit("typing", { roomID, userName: username });
+  };
+
+  const runCode = () => {
+    if (!code.trim()) return;
+
+    setIsExecuting(true);
+
+    socket.emit("compileCode", {
+      code,
+      roomID,
+      language,
+    });
   };
 
   // JOIN SCREEN
@@ -156,7 +183,7 @@ const leaveRoomHandler = () => {
           <h3>Users in Room</h3>
           <ul>
             {users.filter(Boolean).map((user, index) => (
-              <li key={index}>{user || "Anonymous"}</li> 
+              <li key={index}>{user || "Anonymous"}</li>
             ))}
           </ul>
 
@@ -174,12 +201,14 @@ const leaveRoomHandler = () => {
             <option value="java">Java</option>
           </select>
 
-          <button className="leave-room" onClick={leaveRoomHandler}>Leave Room</button>
+          <button className="leave-room" onClick={leaveRoomHandler}>
+            Leave Room
+          </button>
         </div>
 
         <div className="editor-wrapper">
           <Editor
-            height="100%"
+            height="60%"
             language={language}
             value={code}
             onChange={codehandler}
@@ -189,6 +218,23 @@ const leaveRoomHandler = () => {
               fontSize: 14,
             }}
           />
+
+          <div className="execution-panel">
+            <button
+              className={`run-btn ${isExecuting ? "loading" : ""}`}
+              onClick={runCode}
+              disabled={isExecuting}
+            >
+              {isExecuting ? "Executing..." : "Run Code"}
+            </button>
+          </div>
+
+          <textarea
+            placeholder="Output will appear here..."
+            readOnly
+            className="output-console"
+            value={output}
+          ></textarea>
         </div>
       </div>
     </>

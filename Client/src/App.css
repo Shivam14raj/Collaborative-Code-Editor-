@@ -276,4 +276,70 @@ body {
 /* Optional: remove Monaco border feel */
 .editor-wrapper .monaco-editor {
   padding-top: 10px;
+} 
+
+
+
+/* code output css  */
+.editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 10px;
+}
+
+/* EXECUTION PANEL */
+.execution-panel {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+/* RUN BUTTON */
+.run-btn {
+  background: linear-gradient(135deg, #7cf03d, #00ffcc);
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 255, 200, 0.2);
+}
+
+.run-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(0, 255, 200, 0.4);
+}
+
+/* LOADING STATE */
+.run-btn.loading {
+  background: #999;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* OUTPUT CONSOLE */
+.output-console {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px;
+  font-size: 15px;
+  height: 180px;
+  border-radius: 10px;
+  background-color: #0f172a; /* dark console */
+  color: #00ffcc;
+  border: 1px solid #1e293b;
+  font-family: "Fira Code", monospace;
+  resize: none;
+  outline: none;
+}
+
+/* SCROLLBAR (optional sexy touch) */
+.output-console::-webkit-scrollbar {
+  width: 6px;
+}
+.output-console::-webkit-scrollbar-thumb {
+  background: #00ffcc;
+  border-radius: 10px;
 }
